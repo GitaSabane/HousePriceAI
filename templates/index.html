@@ -12,6 +12,8 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body>
@@ -21,97 +23,208 @@
     <h1>🏠 HousePrice AI</h1>
     <p>End-to-End Machine Learning Web Application</p>
 
+    <!-- ERROR MESSAGE -->
+    <div id="errorBox" class="error-box">
+        ⚠ Invalid Input! Please enter realistic values.
+    </div>
+
     <!-- ================= FORM ================= -->
-    <form method="POST">
-        <div class="grid">
-            {% for col in columns %}
-                <input 
-                    type="number" 
-                    step="any" 
-                    name="{{ col }}" 
-                    placeholder="{{ col }}" 
-                    required>
-            {% endfor %}
+    <form method="POST" id="predictionForm">
+
+        <!-- PROPERTY DETAILS -->
+        <div class="section">
+            <h2 class="section-title">🏡 Property Details</h2>
+
+            <div class="slider-grid">
+
+                {% for col in columns %}
+
+                {% if col == "area" %}
+                <div class="slider-box">
+                    <label>Total Area (sq ft)</label>
+                    <input type="range"
+       min="200"
+       max="10000"
+       step="50"
+       value="200"
+       name="area"
+       oninput="updateValue('areaVal', this.value)">
+<span id="areaVal">200</span>
+                </div>
+
+                {% elif col == "bedrooms" %}
+                <div class="slider-box">
+                    <label>Bedrooms</label>
+                    <input type="range"
+       min="1"
+       max="10"
+       value="1"
+       name="bedrooms"
+       oninput="updateValue('bedVal', this.value)">
+<span id="bedVal">1</span>
+                </div>
+
+                {% elif col == "bathrooms" %}
+                <div class="slider-box">
+                    <label>Bathrooms</label>
+                    <input type="range"
+       min="1"
+       max="10"
+       value="1"
+       name="bathrooms"
+       oninput="updateValue('bathVal', this.value)">
+<span id="bathVal">1</span>
+                </div>
+
+                {% elif col == "stories" %}
+                <div class="slider-box">
+                    <label>Floors</label>
+                    <input type="range"
+       min="1"
+       max="4"
+       value="1"
+       name="stories"
+       oninput="updateValue('storyVal', this.value)">
+<span id="storyVal">1</span>
+                </div>
+
+                {% elif col == "parking" %}
+                <div class="slider-box">
+                    <label>Parking Spaces</label>
+                    <input type="range"
+       min="0"
+       max="5"
+       value="0"
+       name="parking"
+       oninput="updateValue('parkVal', this.value)">
+<span id="parkVal">0</span>
+                </div>
+                {% endif %}
+
+                {% endfor %}
+
+            </div>
         </div>
 
-        <button type="submit">Predict Price</button>
+
+        <!-- PROPERTY FEATURES -->
+        <div class="section">
+            <h2 class="section-title">✨ Property Features</h2>
+
+            <div class="feature-grid">
+
+                {% for col in columns %}
+                {% if col not in ["area","bedrooms","bathrooms","stories","parking"] %}
+
+                <div class="toggle-box">
+                    <label>{{ col.replace("_"," ").title() }}</label>
+                    <select name="{{ col }}">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                {% endif %}
+                {% endfor %}
+
+            </div>
+        </div>
+
+        <button type="submit" class="predict-btn">Predict Price</button>
+
     </form>
 
-    <!-- ================= PREDICTION ================= -->
+    <!-- ================= PREDICTION RESULT ================= -->
     {% if prediction %}
-        <div class="result">
-            <h2>Predicted Price</h2>
-            <h3>₹ {{ prediction }}</h3>
-        </div>
+    <div class="result">
+        <h2>Predicted Price</h2>
+        <h3>₹ {{ prediction }}</h3>
+    </div>
     {% endif %}
+
 
     <!-- ================= MODEL METRICS ================= -->
     {% if metrics %}
-        <div class="metrics">
-            <h2>📊 Model Comparison</h2>
+    <div class="metrics">
+        <h2>📊 Model Comparison</h2>
 
-            <div class="metric-grid">
-                {% for model_name, values in metrics.items() %}
-                    <div class="metric-card">
-                        <h3>{{ model_name }}</h3>
-                        <p><strong>R² Score:</strong> {{ values.R2 }}</p>
-                        <p><strong>RMSE:</strong> {{ values.RMSE }}</p>
-                        <p><strong>Cross Validation R²:</strong> {{ values.CrossVal_R2 }}</p>
-                    </div>
-                {% endfor %}
+        <div class="metric-grid">
+            {% for model_name, values in metrics.items() %}
+            <div class="metric-card">
+                <h3>{{ model_name }}</h3>
+                <p><strong>R²:</strong> {{ values.R2 }}</p>
+                <p><strong>RMSE:</strong> {{ values.RMSE }}</p>
+                <p><strong>CrossVal R²:</strong> {{ values.CrossVal_R2 }}</p>
             </div>
+            {% endfor %}
         </div>
+    </div>
     {% endif %}
+
 
     <!-- ================= FEATURE IMPORTANCE CHART ================= -->
     {% if feature_importance %}
-        <div class="chart-section">
-            <h2>🔎 Feature Importance (Random Forest)</h2>
-            <canvas id="importanceChart"></canvas>
-        </div>
+    <div class="chart-section">
+        <h2>🔎 Feature Importance (Random Forest)</h2>
+        <canvas id="importanceChart"></canvas>
+    </div>
 
-        <script>
-            const labels = {{ feature_names | tojson }};
-            const dataValues = {{ feature_importance | tojson }};
+    <script>
+        const labels = {{ feature_names | tojson }};
+        const dataValues = {{ feature_importance | tojson }};
 
-            new Chart(document.getElementById('importanceChart'), {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Feature Importance',
-                        data: dataValues,
-                        backgroundColor: 'rgba(0, 245, 255, 0.6)',
-                        borderColor: '#00f5ff',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    animation: {
-                        duration: 2000
-                    },
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: 'white'
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: 'white' }
-                        },
-                        y: {
-                            ticks: { color: 'white' }
-                        }
-                    }
+        new Chart(document.getElementById('importanceChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Importance',
+                    data: dataValues,
+                    backgroundColor: '#f43f5e',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                animation: { duration: 2000 },
+                scales: {
+                    x: { ticks: { color: '#333' }},
+                    y: { ticks: { color: '#333' }}
                 }
-            });
-        </script>
+            }
+        });
+    </script>
     {% endif %}
 
 </div>
+
+
+<!-- ================= JAVASCRIPT ================= -->
+<script>
+
+function updateValue(id, value) {
+    document.getElementById(id).innerText = value;
+}
+
+document.getElementById("predictionForm").addEventListener("submit", function(event) {
+
+    let inputs = this.querySelectorAll("input[type='range'], select");
+    let valid = false;
+
+    inputs.forEach(input => {
+        if (parseFloat(input.value) > 0) {
+            valid = true;
+        }
+    });
+
+    if (!valid) {
+        event.preventDefault();
+        document.getElementById("errorBox").style.display = "block";
+    }
+
+});
+
+</script>
 
 </body>
 </html>
